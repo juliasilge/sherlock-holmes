@@ -36,7 +36,8 @@ sherlock <- gutenberg_download(1661) %>%
 tidy_sherlock <- sherlock %>%
     mutate(line = row_number()) %>%
     unnest_tokens(word, text) %>%
-    anti_join(stop_words)
+    anti_join(stop_words) %>%
+    filter(word != "holmes")
 
 tidy_sherlock
 ```
@@ -74,7 +75,7 @@ sherlock_dfm <- tidy_sherlock %>%
     cast_dfm(story, word, n)
 save(sherlock_dfm, file = "sherlock_dfm.rda")
 
-topic_model <- stm(sherlock_dfm, K = 24, verbose = FALSE, init.type = "Spectral")
+topic_model <- stm(sherlock_dfm, K = 6, verbose = FALSE, init.type = "Spectral")
 save(topic_model, file = "topic_model.rda")
 ```
 
