@@ -1,0 +1,91 @@
+---
+title: "The Game is Afoot!"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    social: menu
+    source_code: embed
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(shiny)
+library(dplyr)
+library(stm)
+library(quanteda)
+library(tidytext)
+library(ggplot2)
+
+load("topic_model.rda")
+load("sherlock_dfm.rda")
+
+td_beta <- tidy(topic_model)
+td_gamma <- tidy(topic_model, matrix = "gamma",                    
+                 document_names = rownames(sherlock_dfm))
+assignments <- augment(topic_model, sherlock_dfm)
+
+```
+
+
+Top words by topic {data-icon="fa-map-marker"}
+====================================================================
+
+### Which words have the highest probability of being generated from each topic?
+
+```{r}
+fillCol(height = 600, flex = c(NA, 1), 
+  inputPanel(
+    selectInput("topic", "Choose a topic", choices = unique(td_beta$topic))
+  ),
+  plotOutput("topicPlot", height = "100%")
+)
+
+output$topicPlot <- renderPlot({
+    td_beta %>%
+        filter(topic == as.integer(input$topic)) %>%
+        top_n(10, beta) %>%
+        mutate(term = reorder(term, beta)) %>%
+        ggplot(aes(term, beta, fill = beta)) +
+        geom_col(show.legend = FALSE) +
+        scale_fill_gradient(low = "#5FBA7D", high = "#108AEC") +
+        scale_y_continuous(expand = c(0,0)) +
+        coord_flip() +
+        theme_minimal(base_size = 18) +
+        labs(x = NULL, y = expression(beta))
+})
+
+```
+
+
+Top topics by document {data-icon="fa-map-marker"}
+====================================================================
+
+### Which topics are generated from which short stories?
+
+```{r}
+fillCol(height = 600, flex = c(NA, 1), 
+  inputPanel(
+    selectInput("story", "Choose a story", choices = rownames(sherlock_dfm))
+  ),
+  plotOutput("topicPlot", height = "100%")
+)
+
+output$topicPlot <- renderPlot({
+    td_beta %>%
+        filter(topic == as.integer(input$topic)) %>%
+        top_n(10, beta) %>%
+        mutate(term = reorder(term, beta)) %>%
+        ggplot(aes(term, beta, fill = beta)) +
+        geom_col(show.legend = FALSE) +
+        scale_fill_gradient(low = "#5FBA7D", high = "#108AEC") +
+        scale_y_continuous(expand = c(0,0)) +
+        coord_flip() +
+        theme_minimal(base_size = 18) +
+        labs(x = NULL, y = expression(beta))
+})
+
+```
+
+

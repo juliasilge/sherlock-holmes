@@ -1,0 +1,176 @@
+---
+title: "The Game is Afoot!"
+author: "Julia Silge"
+date: '`r Sys.Date()`'
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(cache = TRUE, warning = FALSE, message = FALSE, 
+                      echo = TRUE, dpi = 180)
+options(width=120, dplyr.width = 150)
+library(ggplot2)
+library(scales)
+theme_set(theme_minimal())
+```
+
+
+
+```{r sherlock_bigrams}
+library(tidyverse)
+library(tidytext)
+library(gutenbergr)
+library(stringr)
+
+my_stop_words <- stop_words %>%
+    filter(lexicon == "snowball")
+
+sherlock <- gutenberg_download(1661) %>%
+    mutate(story = case_when(str_detect(text, "ADVENTURE") ~ text,
+                             TRUE ~ NA_character_)) %>%
+    fill(story) %>%
+    filter(story != "THE ADVENTURES OF SHERLOCK HOLMES") %>%
+    mutate(story = factor(story, levels = unique(story)))
+
+tidy_sherlock <- sherlock %>%
+    mutate(line = row_number()) %>%
+    unnest_tokens(word, text) %>%
+    anti_join(stop_words)
+
+tidy_sherlock
+```
+
+
+
+```{r bigram_counts}
+sherlock_bigrams <- sherlock %>%
+    unnest_tokens(bigram, text, token = "ngrams", n = 2)
+
+bigrams_separated <- sherlock_bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+bigrams_filtered <- bigrams_separated %>%
+  filter(!word1 %in% my_stop_words$word) %>%
+  filter(!word2 %in% my_stop_words$word)
+
+bigram_counts <- bigrams_filtered %>% 
+  count(word1, word2, sort = TRUE)
+
+bigram_counts
+```
+
+```{r word_pairs, dependson="tidy_sherlock"}
+library(widyr)
+
+word_pairs <- tidy_sherlock %>%
+    filter(!word %in% my_stop_words$word) %>%
+    group_by(word) %>%
+    filter(n() >= 10) %>%
+    ungroup %>%
+    pairwise_count(word, line, sort = TRUE)
+
+word_pairs
+
+word_cors <- tidy_sherlock %>%
+    filter(!word %in% my_stop_words$word) %>%
+    group_by(word) %>%
+    filter(n() >= 10) %>%
+    pairwise_cor(word, line, sort = TRUE)
+
+word_cors
+```
+
+
+```{r force_network, dependson="word_pairs"}
+library(igraph)
+library(networkD3)
+
+network_pairs <- word_pairs %>%
+    filter(n > 10)
+
+word_graph <- network_pairs %>%
+    graph_from_data_frame()
+word_communities <- cluster_walktrap(word_graph)
+members <- membership(word_communities)
+
+word_d3 <- igraph_to_networkD3(word_graph, group = members)
+
+forceNetwork(Links = word_d3$links, Nodes = word_d3$nodes,
+            Source = "source", Target = "target",
+            NodeID = "name", Value = "value",
+            Group = "group", 
+            opacity = 0.9, charge = -20,
+            zoom  = TRUE, fontSize = 24)
+
+```
+
+
+
+
+## tf-df
+
+
+```{r}
+tidy_sherlock %>%
+    filter(story != 0) %>%
+    count(story, word, sort = TRUE) %>%
+    bind_tf_idf(word, story, n) %>%
+    arrange(-tf_idf)
+```
+
+
+## topic modeling
+
+```{r}
+library(quanteda)
+library(stm)
+
+sherlock_dfm <- tidy_sherlock %>%
+    count(story, word, sort = TRUE) %>%
+    cast_dfm(story, word, n)
+
+topic_model <- stm(sherlock_dfm, K = 20, verbose = FALSE, init.type = "Spectral")
+```
+
+
+```{r}
+td_beta <- tidy(topic_model)
+td_beta
+
+
+td_beta %>%
+    group_by(topic) %>%
+    top_n(10, beta) %>%
+    ungroup() %>%
+    mutate(term = reorder(term, beta)) %>%
+    ggplot(aes(term, beta, fill = as.factor(topic))) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~ topic, scales = "free") +
+    coord_flip()
+```
+
+
+```{r}
+td_gamma <- tidy(topic_model, matrix = "gamma",                    
+                 document_names = rownames(sherlock_dfm))
+td_gamma
+
+
+ggplot(td_gamma, aes(gamma, fill = as.factor(topic))) +
+  geom_histogram(show.legend = FALSE) +
+  facet_wrap(~ topic, ncol = 4) +
+  labs(title = "Distribution of probability for each topic",
+       y = "Number of documents", x = expression(gamma))
+```
+
+```{r}
+assignments <- augment(topic_model, sherlock_dfm)
+assignments
+```
+
+
+
+
+

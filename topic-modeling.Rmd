@@ -1,0 +1,117 @@
+---
+title: "Sherlock Holmes Topic Modeling"
+author: "Julia Silge"
+date: '`r Sys.Date()`'
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(cache = TRUE, warning = FALSE, message = FALSE, 
+                      echo = TRUE, dpi = 180)
+options(width=120, dplyr.width = 150)
+library(ggplot2)
+library(scales)
+theme_set(theme_minimal())
+```
+
+
+```{r sherlock_bigrams}
+library(tidyverse)
+library(tidytext)
+library(gutenbergr)
+library(stringr)
+
+my_stop_words <- stop_words %>%
+    filter(lexicon == "snowball")
+
+sherlock <- gutenberg_download(1661) %>%
+    mutate(story = case_when(str_detect(text, "ADVENTURE") ~ text,
+                             TRUE ~ NA_character_)) %>%
+    fill(story) %>%
+    filter(story != "THE ADVENTURES OF SHERLOCK HOLMES") %>%
+    mutate(story = factor(story, levels = unique(story)))
+
+tidy_sherlock <- sherlock %>%
+    mutate(line = row_number()) %>%
+    unnest_tokens(word, text) %>%
+    anti_join(stop_words)
+
+tidy_sherlock
+```
+
+
+## Explore tf-df
+
+
+```{r}
+tidy_sherlock %>%
+    count(story, word, sort = TRUE) %>%
+    bind_tf_idf(word, story, n) %>%
+    arrange(-tf_idf) %>%
+    group_by(story) %>%
+    top_n(10) %>%
+    ungroup %>%
+    mutate(word = reorder(word, tf_idf)) %>%
+    ggplot(aes(word, tf_idf, fill = story)) +
+    geom_col(alpha = 0.8, show.legend = FALSE) +
+    facet_wrap(~ story, scales = "free") +
+    coord_flip()
+```
+
+
+
+
+## Implement topic modeling
+
+```{r}
+library(quanteda)
+library(stm)
+
+sherlock_dfm <- tidy_sherlock %>%
+    count(story, word, sort = TRUE) %>%
+    cast_dfm(story, word, n)
+save(sherlock_dfm, file = "sherlock_dfm.rda")
+
+topic_model <- stm(sherlock_dfm, K = 24, verbose = FALSE, init.type = "Spectral")
+save(topic_model, file = "topic_model.rda")
+```
+
+
+```{r}
+td_beta <- tidy(topic_model)
+td_beta
+
+
+td_beta %>%
+    group_by(topic) %>%
+    top_n(10, beta) %>%
+    ungroup() %>%
+    mutate(term = reorder(term, beta)) %>%
+    ggplot(aes(term, beta, fill = as.factor(topic))) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~ topic, scales = "free") +
+    coord_flip()
+```
+
+
+```{r}
+td_gamma <- tidy(topic_model, matrix = "gamma",                    
+                 document_names = rownames(sherlock_dfm))
+td_gamma
+
+
+ggplot(td_gamma, aes(gamma, fill = as.factor(topic))) +
+  geom_histogram(show.legend = FALSE) +
+  facet_wrap(~ topic, ncol = 4) +
+  labs(title = "Distribution of probability for each topic",
+       y = "Number of documents", x = expression(gamma))
+```
+
+```{r}
+assignments <- augment(topic_model, sherlock_dfm)
+assignments
+```
+
+
