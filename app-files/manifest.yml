@@ -1,0 +1,11 @@
+---
+applications:  
+- name: sherlock-holmes
+  memory: 1G
+  instances: 1
+  buildpack: git://github.com/beibeiyang/cf-buildpack-r.git
+  env:
+    CRAN_MIRROR: https://cran.rstudio.com
+    CF_STAGING_TIMEOUT: 9999
+    CF_STARTUP_TIMEOUT: 9999
+    
