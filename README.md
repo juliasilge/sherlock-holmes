@@ -2,9 +2,8 @@
 
 Here I'm working on a project of text mining Sherlock Holmes short stories.
 
-Find notebooks, `.Rmd` files, and such in this repo.
+![Sherlock](https://media.giphy.com/media/3o7TKVSE5isogWqnwk/giphy.gif)
 
-![GIPHY](https://media.giphy.com/media/3o7TKVSE5isogWqnwk/giphy.gif)
-
+Find scripts, `.Rmd` files, the app, and such in this repo.
 
 
