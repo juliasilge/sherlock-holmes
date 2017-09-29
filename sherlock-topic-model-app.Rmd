@@ -31,7 +31,7 @@ td_gamma <- tidy(topic_model, matrix = "gamma",
 Documents by topic {data-icon="fa-bar-chart"}
 ====================================================================
 
-### Which documents have the highest probability of being generated from each topic?
+### Which documents have the highest probability of being generated from each topic? {data-height=800}
 
 ```{r}
 td_gamma %>% 
@@ -53,6 +53,19 @@ td_gamma %>%
     labs(x = NULL, y = expression(gamma), fill = "Topic")    
 
 ```
+
+### Topic modeling {data-height=200}
+
+Topic modeling is a method for unsupervised classification of text documents 
+which finds natural groups of items even when we’re not sure what we’re looking for.
+This app explores the results of a [Structural Topic Model](http://www.structuraltopicmodel.com/)
+for the twelve short stories in 
+[*The Adventures of Sherlock Holmes*](https://www.gutenberg.org/ebooks/1661).
+Which stories are more similar? Which stories are more about women, or more about events at night, 
+or more about... geese?! Use each tab to find out.
+
+Explore our book [*Text Mining with R: A Tidy Approach*](http://tidytextmining.com/) 
+to learn more about how to implement topic modeling using tidy data principles.
 
 
 Words by topic {data-icon="fa-list"}
