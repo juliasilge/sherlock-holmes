@@ -2,7 +2,7 @@
 
 Here I'm working on a project of text mining Sherlock Holmes short stories.
 
-![GIPHY](https://giphy.com/gifs/3o7TKVSE5isogWqnwk/html5)
+![GIPHY](https://media.giphy.com/media/3o7TKVSE5isogWqnwk/giphy.gif)
 
 Find scripts, `.Rmd` files, the app, and such in this repo.
 
