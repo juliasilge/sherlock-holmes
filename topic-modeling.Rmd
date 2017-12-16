@@ -22,15 +22,16 @@ theme_set(theme_minimal())
 library(tidyverse)
 library(tidytext)
 library(gutenbergr)
-library(stringr)
 
-sherlock <- gutenberg_download(1661) %>%
-  mutate(story = ifelse(str_detect(text, "ADVENTURE"),
-                        text,
-                        NA)) %>%
-  fill(story) %>%
-  filter(story != "THE ADVENTURES OF SHERLOCK HOLMES") %>%
-  mutate(story = factor(story, levels = unique(story)))
+sherlock_raw <- gutenberg_download(1661)
+
+sherlock <- sherlock_raw %>%
+    mutate(story = ifelse(str_detect(text, "ADVENTURE"),
+                          text,
+                          NA)) %>%
+    fill(story) %>%
+    filter(story != "THE ADVENTURES OF SHERLOCK HOLMES") %>%
+    mutate(story = factor(story, levels = unique(story)))
 
 tidy_sherlock <- sherlock %>%
     mutate(line = row_number()) %>%
